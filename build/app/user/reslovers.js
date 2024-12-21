@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reslovers = void 0;
+const db_1 = require("../../clients/db");
 const user_1 = __importDefault(require("../../services/user"));
 const tweet_1 = __importDefault(require("../../services/tweet"));
 const queries = {
@@ -33,11 +34,33 @@ const queries = {
         return user;
     })
 };
+const mutations = {
+    followUser: (parent_1, _a, ctx_1) => __awaiter(void 0, [parent_1, _a, ctx_1], void 0, function* (parent, { to }, ctx) {
+        if (!ctx.user || !ctx.user.id)
+            throw new Error('Unauthencated');
+        yield user_1.default.followUser(ctx.user.id, to);
+        return true;
+    }),
+    unFollowUser: (parent_1, _a, ctx_1) => __awaiter(void 0, [parent_1, _a, ctx_1], void 0, function* (parent, { to }, ctx) {
+        if (!ctx.user || !ctx.user.id)
+            throw new Error('Unauthencated');
+        yield user_1.default.unFollowUser(ctx.user.id, to);
+        return true;
+    })
+};
 const extraReslovers = {
     User: {
         tweets: (parent) => (
         // prismaClient.tweet.findMany({where: {author: {id: parent.id}}})
-        tweet_1.default.getTweetsByUserId(parent.id))
+        tweet_1.default.getTweetsByUserId(parent.id)),
+        follower: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const result = yield db_1.prismaClient.follows.findMany({ where: { following: { id: parent.id } }, include: { follower: true } });
+            return result.map((el) => el.follower);
+        }),
+        following: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const result = yield db_1.prismaClient.follows.findMany({ where: { follower: { id: parent.id } }, include: { following: true } });
+            return result.map((el) => el.following);
+        })
     }
 };
-exports.reslovers = { queries, extraReslovers };
+exports.reslovers = { queries, extraReslovers, mutations };
