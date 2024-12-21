@@ -61,6 +61,7 @@ const queries =  {
         return userToken;
         
     },
+
     getCurrentUser: async (parent:any, args:any, ctx: GraphqlContext) => {
        const id = ctx.user?.id;
 
@@ -69,6 +70,11 @@ const queries =  {
        const user = prismaClient.user.findUnique({where: {id}});
 
        return user
+    },
+
+    getUserById:  async (parent:any, {id}:{id: string}, ctx: GraphqlContext) => {
+       const user = await prismaClient.user.findUnique({where: {id}})
+       return user;
     }
 }
 
