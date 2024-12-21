@@ -3,6 +3,8 @@ import { prismaClient } from "../../clients/db";
 import JWTService from "../../services/jwt";
 import { GraphqlContext } from "../../interfaces";
 import { User } from "@prisma/client";
+import UserService from "../../services/user";
+import TweetService from "../../services/tweet";
 
 interface GoogleTokenResult {
     iss? : string;
@@ -27,53 +29,20 @@ interface GoogleTokenResult {
 const queries =  {
 
     verifyGoogleToken: async (parent: any, {token}: {token: string}) => {
-        const googleToken = token
-        const googleOauthUrl = new URL('https://oauth2.googleapis.com/tokeninfo')
-        googleOauthUrl.searchParams.set('id_token', googleToken);
-
-        const {data} = await axios.get<GoogleTokenResult>(googleOauthUrl.toString(), {
-            responseType: 'json'
-        })
-
-        if (!data?.email) {
-            throw new Error("Email is required");
-        }
-
-        const user = await prismaClient.user.findUnique({where: {email: data?.email}})
-
-        if (!user) {
-            await prismaClient.user.create({
-                data: {
-                    email: data.email,
-                    firstName: data.given_name,
-                    lastName: data.family_name,
-                    profileImageUrl: data.picture
-                }
-            })
-        }
-    
-        const userInDb =  await prismaClient.user.findUnique({where: {email: data?.email}})
-    
-        if (!userInDb) throw new Error('User with email not found');
-    
-        const userToken = JWTService.generateTokenForUser(userInDb);
-    
-        return userToken;
-        
+        const resultToken = await UserService.verifyGoogleToken(token)
+        return resultToken
     },
 
     getCurrentUser: async (parent:any, args:any, ctx: GraphqlContext) => {
        const id = ctx.user?.id;
-
        if (!id) return null;
 
-       const user = prismaClient.user.findUnique({where: {id}});
-
+       const user = UserService.getUserById(id);
        return user
     },
 
     getUserById:  async (parent:any, {id}:{id: string}, ctx: GraphqlContext) => {
-       const user = await prismaClient.user.findUnique({where: {id}})
+       const user = UserService.getUserById(id)
        return user;
     }
 }
@@ -81,7 +50,8 @@ const queries =  {
 const extraReslovers = {
     User: {
         tweets: (parent: User) => (
-            prismaClient.tweet.findMany({where: {author: {id: parent.id}}})
+            // prismaClient.tweet.findMany({where: {author: {id: parent.id}}})
+           TweetService.getTweetsByUserId(parent.id)
         )
     }
 }

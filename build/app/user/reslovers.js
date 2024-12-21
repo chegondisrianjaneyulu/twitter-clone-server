@@ -13,53 +13,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reslovers = void 0;
-const axios_1 = __importDefault(require("axios"));
-const db_1 = require("../../clients/db");
-const jwt_1 = __importDefault(require("../../services/jwt"));
+const user_1 = __importDefault(require("../../services/user"));
+const tweet_1 = __importDefault(require("../../services/tweet"));
 const queries = {
     verifyGoogleToken: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { token }) {
-        const googleToken = token;
-        const googleOauthUrl = new URL('https://oauth2.googleapis.com/tokeninfo');
-        googleOauthUrl.searchParams.set('id_token', googleToken);
-        const { data } = yield axios_1.default.get(googleOauthUrl.toString(), {
-            responseType: 'json'
-        });
-        if (!(data === null || data === void 0 ? void 0 : data.email)) {
-            throw new Error("Email is required");
-        }
-        const user = yield db_1.prismaClient.user.findUnique({ where: { email: data === null || data === void 0 ? void 0 : data.email } });
-        if (!user) {
-            yield db_1.prismaClient.user.create({
-                data: {
-                    email: data.email,
-                    firstName: data.given_name,
-                    lastName: data.family_name,
-                    profileImageUrl: data.picture
-                }
-            });
-        }
-        const userInDb = yield db_1.prismaClient.user.findUnique({ where: { email: data === null || data === void 0 ? void 0 : data.email } });
-        if (!userInDb)
-            throw new Error('User with email not found');
-        const userToken = jwt_1.default.generateTokenForUser(userInDb);
-        return userToken;
+        const resultToken = yield user_1.default.verifyGoogleToken(token);
+        return resultToken;
     }),
     getCurrentUser: (parent, args, ctx) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const id = (_a = ctx.user) === null || _a === void 0 ? void 0 : _a.id;
         if (!id)
             return null;
-        const user = db_1.prismaClient.user.findUnique({ where: { id } });
+        const user = user_1.default.getUserById(id);
         return user;
     }),
     getUserById: (parent_1, _a, ctx_1) => __awaiter(void 0, [parent_1, _a, ctx_1], void 0, function* (parent, { id }, ctx) {
-        const user = yield db_1.prismaClient.user.findUnique({ where: { id } });
+        const user = user_1.default.getUserById(id);
         return user;
     })
 };
 const extraReslovers = {
     User: {
-        tweets: (parent) => (db_1.prismaClient.tweet.findMany({ where: { author: { id: parent.id } } }))
+        tweets: (parent) => (
+        // prismaClient.tweet.findMany({where: {author: {id: parent.id}}})
+        tweet_1.default.getTweetsByUserId(parent.id))
     }
 };
 exports.reslovers = { queries, extraReslovers };
