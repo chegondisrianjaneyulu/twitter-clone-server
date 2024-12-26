@@ -5,6 +5,7 @@ import { GraphqlContext } from "../../interfaces";
 import { User } from "@prisma/client";
 import UserService from "../../services/user";
 import TweetService from "../../services/tweet";
+import { redisClient } from "../../clients/redis";
 
 interface GoogleTokenResult {
     iss? : string;
@@ -52,7 +53,7 @@ const mutations = {
        if (!ctx.user || !ctx.user.id) throw new Error('Unauthencated')
 
        await UserService.followUser(ctx.user.id, to)
-
+       await redisClient.del(`RECOMMENDED_USERS:${ctx.user.id}`)
        return true
     },
 
@@ -60,7 +61,7 @@ const mutations = {
         if (!ctx.user || !ctx.user.id) throw new Error('Unauthencated')
 
         await UserService.unFollowUser(ctx.user.id, to)
-
+        await redisClient.del(`RECOMMENDED_USERS:${ctx.user.id}`)
         return true
     }
 }
@@ -73,6 +74,7 @@ const extraReslovers = {
         ),
         follower: async (parent: User) => {
            const result = await  prismaClient.follows.findMany({where: {following: {id: parent.id}}, include: {follower: true}})
+          
            return  result.map((el) => el.follower)
         },
         following: async (parent: User) => {
@@ -81,6 +83,11 @@ const extraReslovers = {
         },
         recommendedUsers: async (parent: User, _:any, ctx:GraphqlContext) => {
             if (!ctx.user) return []
+           
+            // let cachedValue = await redisClient.get(`RECOMMENDED_USERS:${ctx.user.id}`)
+
+            // if (cachedValue) return JSON.parse(cachedValue)
+
             const myFollowing = await prismaClient.follows.findMany({where: {follower: {id: ctx.user.id}}, include: {following: {include : {follower: {include: {following: true}}}}}})
             
             const users: User[] = []
@@ -92,6 +99,8 @@ const extraReslovers = {
                     }
                 }
             }
+
+            // await redisClient.set(`RECOMMENDED_USERS:${ctx.user.id}`, JSON.stringify(users))
             return users
         }
     } 

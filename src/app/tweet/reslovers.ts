@@ -5,6 +5,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import UserService from "../../services/user";
 import TweetService, { CreateTweetPayload } from "../../services/tweet";
+import { redisClient } from "../../clients/redis";
 
 
 
@@ -31,7 +32,7 @@ const queries = {
         }
 
         const putObjectCommand = new PutObjectCommand({
-            Bucket: 'hk-test-s3bucket',
+            Bucket: process.env.S3_BUCKET_NAME,
             Key: `uploads/${ctx.user.id}/${imageName}-${Date.now()}.${imageType}`
         })
 
@@ -47,6 +48,8 @@ const muatations = {
         if (!ctx.user) throw new Error('You are not authenticated');
         
         const tweet = await TweetService.createTweet({...payload, userId: ctx.user.id})
+
+        
         
         return tweet;
 
