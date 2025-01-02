@@ -5,7 +5,6 @@ import { GraphqlContext } from "../../interfaces";
 import { User } from "@prisma/client";
 import UserService from "../../services/user";
 import TweetService from "../../services/tweet";
-import { redisClient } from "../../clients/redis";
 
 interface GoogleTokenResult {
     iss? : string;
@@ -53,7 +52,6 @@ const mutations = {
        if (!ctx.user || !ctx.user.id) throw new Error('Unauthencated')
 
        await UserService.followUser(ctx.user.id, to)
-       await redisClient.del(`RECOMMENDED_USERS:${ctx.user.id}`)
        return true
     },
 
@@ -61,7 +59,6 @@ const mutations = {
         if (!ctx.user || !ctx.user.id) throw new Error('Unauthencated')
 
         await UserService.unFollowUser(ctx.user.id, to)
-        await redisClient.del(`RECOMMENDED_USERS:${ctx.user.id}`)
         return true
     }
 }

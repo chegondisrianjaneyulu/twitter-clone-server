@@ -1,11 +1,10 @@
 import { Tweet } from "@prisma/client";
-import { prismaClient } from "../../clients/db";
 import { GraphqlContext } from "../../interfaces";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import UserService from "../../services/user";
 import TweetService, { CreateTweetPayload } from "../../services/tweet";
-import { redisClient } from "../../clients/redis";
+
 
 
 
